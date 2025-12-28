@@ -27,8 +27,8 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
             user,
             accessToken,
         })
-    } catch (err) {
-        return next(err)
+    } catch (error) {
+        return next(error)
     }
 }
 
