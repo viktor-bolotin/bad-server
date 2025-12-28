@@ -7,11 +7,6 @@ import User, { IUser } from '../models/user'
 // TODO: Добавить guard admin
 // eslint-disable-next-line max-len
 // Get GET /customers?page=2&limit=5&sort=totalAmount&order=desc&registrationDateFrom=2023-01-01&registrationDateTo=2023-12-31&lastOrderDateFrom=2023-01-01&lastOrderDateTo=2023-12-31&totalAmountFrom=100&totalAmountTo=1000&orderCountFrom=1&orderCountTo=10
-
-function escapeRegex(str: string) {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 export const getCustomers = async (
     req: Request,
     res: Response,
@@ -20,7 +15,6 @@ export const getCustomers = async (
     try {
         const {
             page = 1,
-            limit = 10,
             sortField = 'createdAt',
             sortOrder = 'desc',
             registrationDateFrom,
@@ -34,13 +28,8 @@ export const getCustomers = async (
             search,
         } = req.query
 
+        const limit = Math.min(Number(req.query.limit) || 10, 10)
         const filters: FilterQuery<Partial<IUser>> = {}
-
-        const normalizedLimit = (() => {
-            const num = Number(limit)
-            return (num >= 1 && num <= 10) ? num : 10
-        })()
-
 
         if (registrationDateFrom) {
             filters.createdAt = {
@@ -103,8 +92,7 @@ export const getCustomers = async (
         }
 
         if (search) {
-            const escapedSearch = escapeRegex(search as string)
-            const searchRegex = new RegExp(escapedSearch, 'i')
+            const searchRegex = new RegExp(search as string, 'i')
             const orders = await Order.find(
                 {
                     $or: [{ deliveryAddress: searchRegex }],
@@ -128,8 +116,8 @@ export const getCustomers = async (
 
         const options = {
             sort,
-            skip: (Number(page) - 1) * normalizedLimit,
-            limit: normalizedLimit,
+            skip: (Number(page) - 1) * limit,
+            limit,
         }
 
         const users = await User.find(filters, null, options).populate([
@@ -149,7 +137,7 @@ export const getCustomers = async (
         ])
 
         const totalUsers = await User.countDocuments(filters)
-        const totalPages = Math.ceil(totalUsers / normalizedLimit)
+        const totalPages = Math.ceil(totalUsers / limit)
 
         res.status(200).json({
             customers: users,
@@ -157,7 +145,7 @@ export const getCustomers = async (
                 totalUsers,
                 totalPages,
                 currentPage: Number(page),
-                pageSize: normalizedLimit,
+                pageSize: limit,
             },
         })
     } catch (error) {

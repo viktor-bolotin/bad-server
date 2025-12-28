@@ -1,29 +1,11 @@
-import { Request, NextFunction, Response, Express } from 'express'
+import { Request, Express } from 'express'
 import multer, { FileFilterCallback } from 'multer'
+import { join } from 'path'
 import crypto from 'crypto'
-import { join, extname } from 'path'
-import fs from 'fs'
-import BadRequestError from '../errors/bad-request-error'
+import { existsSync, mkdirSync } from 'fs'
 
 type DestinationCallback = (error: Error | null, destination: string) => void
 type FileNameCallback = (error: Error | null, filename: string) => void
-
-const manageDirectory = (dirPath: string) => {
-    if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true })
-    }
-}
-
-const isSupportedFile = (fileType: string): boolean => {
-    const fileTypes = [
-        'image/png',
-        'image/jpg',
-        'image/jpeg',
-        'image/gif',
-        'image/svg+xml',
-    ]
-    return fileTypes.includes(fileType)
-}
 
 const storage = multer.diskStorage({
     destination: (
@@ -31,15 +13,15 @@ const storage = multer.diskStorage({
         _file: Express.Multer.File,
         cb: DestinationCallback
     ) => {
-        const uploadPath = join(
-            process.cwd(),
-            'src',
-            'public',
-            process.env.UPLOAD_PATH_TEMP || 'temp'
-        )
-        
-        manageDirectory(uploadPath)
-        cb(null, uploadPath)
+        const destinationPath = join(
+                __dirname,
+                process.env.UPLOAD_PATH_TEMP
+                    ? `../public/${process.env.UPLOAD_PATH_TEMP}`
+                    : '../public'
+            )
+        if (!existsSync(destinationPath))
+            mkdirSync(destinationPath, { recursive: true }) 
+        cb(null, destinationPath)
     },
 
     filename: (
@@ -47,30 +29,36 @@ const storage = multer.diskStorage({
         file: Express.Multer.File,
         cb: FileNameCallback
     ) => {
-        const uniqueId = crypto.randomBytes(16).toString('hex')
-        const uniqueName = `${uniqueId}${extname(file.originalname)}`
-        cb(null, uniqueName)
+        const uniqueName = crypto.randomBytes(8).toString('hex')
+        cb(null, `${uniqueName}${file.originalname}`)
     },
 })
+
+const types = [
+    'image/png',
+    'image/jpg',
+    'image/jpeg',
+    'image/gif',
+    'image/svg+xml',
+]
 
 const fileFilter = (
     _req: Request,
     file: Express.Multer.File,
     cb: FileFilterCallback
 ) => {
-    if (!isSupportedFile(file.mimetype)) {
-        return cb(new BadRequestError('Недопустимый тип файла. Разрешены только изображения: PNG, JPG, JPEG, GIF, SVG'))
+    if (!types.includes(file.mimetype)) {
+        return cb(null, false)
     }
 
     return cb(null, true)
 }
 
-export const validateFileSize = (minSize: number) => 
-    (req: Request, _res: Response, next: NextFunction) => {
-        if (req.file && req.file.size < minSize) {
-            return next(new BadRequestError(`Файл слишком маленький (меньше ${minSize} байт)`))
-        }
-        next()
-    }
-
-export default multer({ storage, fileFilter, limits: {fileSize: 3 * 1024 * 1024} })
+export default multer({
+    storage,
+    fileFilter,
+    limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 1,
+    },
+})

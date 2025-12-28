@@ -2,13 +2,14 @@ import { Joi, celebrate } from 'celebrate'
 import { Types } from 'mongoose'
 
 // eslint-disable-next-line no-useless-escape
-export const phoneRegExp = /^[+\d\s\-()]{10,30}$/
+export const phoneRegExp = /^(\+\d+)?(?:\s|-?|\(?\d+\)?)+$/
 
 export enum PaymentType {
     Card = 'card',
     Online = 'online',
 }
 
+// валидация id
 export const validateOrderBody = celebrate({
     body: Joi.object().keys({
         items: Joi.array()
@@ -27,18 +28,18 @@ export const validateOrderBody = celebrate({
             .valid(...Object.values(PaymentType))
             .required()
             .messages({
-                'string.valid': 'Указан невалидный способ оплаты',
+                'string.valid':
+                    'Указано не валидное значение для способа оплаты, возможные значения - "card", "online"',
                 'string.empty': 'Не указан способ оплаты',
             }),
         email: Joi.string().email().required().messages({
             'string.empty': 'Не указан email',
         }),
-        phone: Joi.string().required().pattern(phoneRegExp).min(10).max(30).messages({
+        phone: Joi.string().required().max(20).pattern(phoneRegExp).messages({
+            'string.max': 'Телефон слишком длинный',
+            'string.pattern.base': 'Неверный формат телефона',
             'string.empty': 'Не указан телефон',
-            'string.max': 'Слишком длинный номер телефона',
-            'string.min': 'Слишком короткий номер телефона',
-            'string.pattern.base': 'Некорректный формат телефона'
-            }),
+        }),
         address: Joi.string().required().messages({
             'string.empty': 'Не указан адрес',
         }),
