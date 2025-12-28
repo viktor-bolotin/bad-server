@@ -5,6 +5,7 @@ import 'dotenv/config'
 import express, { json, urlencoded } from 'express'
 import mongoose from 'mongoose'
 import path from 'path'
+import csrf from 'csurf';
 import { DB_ADDRESS } from './config'
 import errorHandler from './middlewares/error-handler'
 import serveStatic from './middlewares/serverStatic'
@@ -18,6 +19,16 @@ app.use(cookieParser())
 app.use(cors())
 // app.use(cors({ origin: ORIGIN_ALLOW, credentials: true }));
 // app.use(express.static(path.join(__dirname, 'public')));
+
+const csrfProtection = csrf({
+  cookie: {
+    httpOnly: true,      // Запрещает доступ из JavaScript
+    secure: process.env.NODE_ENV === 'production', // Только HTTPS в продакшене
+    sameSite: 'lax',     // Защита от кросс‑сайтовых запросов
+  },
+});
+
+app.use(csrfProtection);
 
 app.use(serveStatic(path.join(__dirname, 'public')))
 
