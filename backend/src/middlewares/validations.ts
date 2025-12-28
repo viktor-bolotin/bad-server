@@ -9,7 +9,6 @@ export enum PaymentType {
     Online = 'online',
 }
 
-// валидация id
 export const validateOrderBody = celebrate({
     body: Joi.object().keys({
         items: Joi.array()

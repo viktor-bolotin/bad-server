@@ -14,7 +14,7 @@ const manageDirectory = (dirPath: string) => {
     }
 }
 
-const isSupportedFileType = (fileType: string): boolean => {
+const isSupportedFile = (fileType: string): boolean => {
     const fileTypes = [
         'image/png',
         'image/jpg',
@@ -58,7 +58,7 @@ const fileFilter = (
     file: Express.Multer.File,
     cb: FileFilterCallback
 ) => {
-    if (!isSupportedFileType(file.mimetype)) {
+    if (!isSupportedFile(file.mimetype)) {
         return cb(new BadRequestError('Недопустимый тип файла. Разрешены только изображения: PNG, JPG, JPEG, GIF, SVG'))
     }
 

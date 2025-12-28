@@ -24,7 +24,6 @@ export const createLimiter = (windowMs: number, limit: number) =>
         message: 'Слишком много запросов. Пожалуйста, попробуйте позже.'
     },
     keyGenerator: (req) => {
-        // Используем IP + токен для уникальности
         const token = req.headers.authorization || 'no-token'
         return req.ip + token
     },

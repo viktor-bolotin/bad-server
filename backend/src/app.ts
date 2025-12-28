@@ -19,8 +19,8 @@ const app = express()
 
 const createUploadDirectories = () => {
     const srcPublicDir = path.join(process.cwd(), 'src', 'public')
-    const tempDir = path.join(srcPublicDir, process.env.UPLOAD_PATH_TEMP || 'temp')
     const imagesDir = path.join(srcPublicDir, process.env.UPLOAD_PATH || 'images')
+    const tempDir = path.join(srcPublicDir, process.env.UPLOAD_PATH_TEMP || 'temp')
     const directories: string[] = [srcPublicDir, tempDir, imagesDir]
     directories.forEach((dir: string) => {
         if (!fs.existsSync(dir)) {
@@ -43,7 +43,6 @@ app.use(helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     contentSecurityPolicy: false
 }))
-app.options('*', cors())
 
 app.use(serveStatic(path.join(__dirname, 'public')))
 
@@ -55,12 +54,12 @@ app.use('/products', limiter)
 app.use('/orders', limiter)
 app.use('/customers', limiter)
 
+app.options('*', cors())
 
 app.use(routes)
 
 app.use(errors())
 app.use(errorHandler)
-
 
 const bootstrap = async () => {
     try {
