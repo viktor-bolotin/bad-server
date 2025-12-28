@@ -1,4 +1,5 @@
 # Проектная работа "WebLarek. Плохой сервер.", спринт 17
+https://github.com/viktor-bolotin/bad-server.git
 
 ## Подготовка к работе
 1. Склонировать репозиторий
