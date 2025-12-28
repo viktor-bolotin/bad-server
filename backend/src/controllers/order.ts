@@ -1,6 +1,5 @@
 import { NextFunction, Request, Response } from 'express'
 import { FilterQuery, Error as MongooseError, Types } from 'mongoose'
-import sanitizeHtml from 'sanitize-html'
 import BadRequestError from '../errors/bad-request-error'
 import NotFoundError from '../errors/not-found-error'
 import Order, { IOrder } from '../models/order'
@@ -18,7 +17,6 @@ export const getOrders = async (
     try {
         const {
             page = 1,
-            limit = 10,
             sortField = 'createdAt',
             sortOrder = 'desc',
             status,
@@ -29,19 +27,16 @@ export const getOrders = async (
             search,
         } = req.query
 
-        const normalizedLimit = (() => {
-            const num = Number(limit)
-            return (num >= 1 && num <= 10) ? num : 10
-        })()
-
-
+        const normalizedLimit =  Math.min(Number(req.query.limit),10)
         const filters: FilterQuery<Partial<IOrder>> = {}
 
         if (status) {
-            if (typeof status !== 'string') {
-                return next(new BadRequestError('Статус должен быть строкой'));
+            if (typeof status === 'object') {
+                Object.assign(filters, status)
             }
-            filters.status = status
+            if (typeof status === 'string') {
+                filters.status = status
+            }
         }
 
         if (totalAmountFrom) {
@@ -162,15 +157,9 @@ export const getOrdersCurrentUser = async (
     try {
         const userId = res.locals.user._id
         const { search, page = 1, limit = 5 } = req.query
-
-        const normalizedLimit = (() => {
-            const num = Number(limit)
-            return (num >= 1 && num <= 5) ? num : 5
-        })()
-
         const options = {
-            skip: (Number(page) - 1) *normalizedLimit,
-            limit: normalizedLimit,
+            skip: (Number(page) - 1) * Number(limit),
+            limit: Number(limit),
         }
 
         const user = await User.findById(userId)
@@ -216,7 +205,7 @@ export const getOrdersCurrentUser = async (
         }
 
         const totalOrders = orders.length
-        const totalPages = Math.ceil(totalOrders / normalizedLimit)
+        const totalPages = Math.ceil(totalOrders / Number(limit))
 
         orders = orders.slice(options.skip, options.skip + options.limit)
 
@@ -226,7 +215,7 @@ export const getOrdersCurrentUser = async (
                 totalOrders,
                 totalPages,
                 currentPage: Number(page),
-                pageSize: normalizedLimit,
+                pageSize: Number(limit),
             },
         })
     } catch (error) {
@@ -304,18 +293,7 @@ export const createOrder = async (
         const userId = res.locals.user._id
         const { address, payment, phone, total, email, items, comment } =
             req.body
-
-        const clearComment = comment ? sanitizeHtml(comment, {
-            allowedTags: [],
-            allowedAttributes: {},
-        }) : comment
-
-        const clearPhone = phone.replace(/[^\d+]/g, '');
-
-        if (clearPhone.length < 11 || clearPhone.length > 12) {
-            return next(new BadRequestError('Некорректный номер телефона'));
-        }
-
+        
         items.forEach((id: Types.ObjectId) => {
             const product = products.find((p) => p._id.equals(id))
             if (!product) {
@@ -337,7 +315,7 @@ export const createOrder = async (
             payment,
             phone,
             email,
-            comment: clearComment,
+            comment: escape(comment).slice(0, 1000),
             customer: userId,
             deliveryAddress: address,
         })

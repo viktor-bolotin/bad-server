@@ -4,14 +4,6 @@ import NotFoundError from '../errors/not-found-error'
 import Order from '../models/order'
 import User, { IUser } from '../models/user'
 
-// TODO: Добавить guard admin
-// eslint-disable-next-line max-len
-// Get GET /customers?page=2&limit=5&sort=totalAmount&order=desc&registrationDateFrom=2023-01-01&registrationDateTo=2023-12-31&lastOrderDateFrom=2023-01-01&lastOrderDateTo=2023-12-31&totalAmountFrom=100&totalAmountTo=1000&orderCountFrom=1&orderCountTo=10
-
-function escapeRegex(str: string) {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 export const getCustomers = async (
     req: Request,
     res: Response,
@@ -20,7 +12,6 @@ export const getCustomers = async (
     try {
         const {
             page = 1,
-            limit = 10,
             sortField = 'createdAt',
             sortOrder = 'desc',
             registrationDateFrom,
@@ -34,13 +25,8 @@ export const getCustomers = async (
             search,
         } = req.query
 
+        const normalizedLimit = Math.min(Number(req.query.limit) || 10, 10)
         const filters: FilterQuery<Partial<IUser>> = {}
-
-        const normalizedLimit = (() => {
-            const num = Number(limit)
-            return (num >= 1 && num <= 10) ? num : 10
-        })()
-
 
         if (registrationDateFrom) {
             filters.createdAt = {
@@ -103,11 +89,10 @@ export const getCustomers = async (
         }
 
         if (search) {
-            const escapedSearch = escapeRegex(search as string)
-            const searchRegex = new RegExp(escapedSearch, 'i')
+            const escapedRegex = new RegExp(search as string, 'i')
             const orders = await Order.find(
                 {
-                    $or: [{ deliveryAddress: searchRegex }],
+                    $or: [{ deliveryAddress: { name: escapedRegex }, }],
                 },
                 '_id'
             )
@@ -115,7 +100,7 @@ export const getCustomers = async (
             const orderIds = orders.map((order) => order._id)
 
             filters.$or = [
-                { name: searchRegex },
+                { name: escapedRegex },
                 { lastOrder: { $in: orderIds } },
             ]
         }
