@@ -17,9 +17,9 @@ export interface IUser extends Document {
     _id: Types.ObjectId
     name: string
     email: string
-    password: string
-    tokens: { token: string }[]
-    roles: Role[]
+    password?: string
+    tokens?: { token: string }[]
+    roles?: Role[]
     phone: string
     totalAmount: number
     orderCount: number
@@ -103,6 +103,7 @@ const userSchema = new mongoose.Schema<IUser, IUserModel, IUserMethods>(
     {
         versionKey: false,
         timestamps: true,
+        // Возможно удаление пароля в контроллере создания, т.к. select: false не работает в случае создания сущности https://mongoosejs.com/docs/api/document.html#Document.prototype.toJSON()
         toJSON: {
             virtuals: true,
             transform: (_doc, ret) => {
@@ -170,7 +171,8 @@ userSchema.methods.generateRefreshToken =
             .update(refreshToken)
             .digest('hex')
 
-        user.tokens.push({ token: rTknHash })
+        // Сохраняем refresh токена в базу данных, можно делать в контроллере авторизации/регистрации
+        user.tokens?.push({ token: rTknHash })
         await user.save()
 
         return refreshToken
