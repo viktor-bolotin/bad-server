@@ -5,6 +5,7 @@ import 'dotenv/config'
 import express, { json, urlencoded } from 'express'
 import mongoose from 'mongoose'
 import path from 'path'
+import rateLimit from 'express-rate-limit'
 import { DB_ADDRESS } from './config'
 import errorHandler from './middlewares/error-handler'
 import serveStatic from './middlewares/serverStatic'
@@ -15,21 +16,28 @@ const app = express()
 
 app.use(cookieParser())
 
-app.use(cors())
-// app.use(cors({ origin: ORIGIN_ALLOW, credentials: true }));
-// app.use(express.static(path.join(__dirname, 'public')));
+app.use(cors({ origin: process.env.ORIGIN_ALLOW, credentials: true }))
 
 app.use(serveStatic(path.join(__dirname, 'public')))
 
-app.use(urlencoded({ extended: true }))
-app.use(json())
+app.use(urlencoded({ extended: true, limit: '10kb' }))
+app.use(json({ limit: '10kb' }))
 
 app.options('*', cors())
+
+app.use(
+    rateLimit({
+        windowMs: 10 * 60 * 1000, // 10 minutes
+        limit: 50, // Limit each IP to 100 requests per `window`
+        message: 'Слишком много запросов с Вашего IP, попробуйте позже',
+        standardHeaders: 'draft-8', // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
+        legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+    })
+)
+
 app.use(routes)
 app.use(errors())
 app.use(errorHandler)
-
-// eslint-disable-next-line no-console
 
 const bootstrap = async () => {
     try {
