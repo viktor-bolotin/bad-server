@@ -3,23 +3,16 @@ import fs from 'fs'
 import path from 'path'
 
 export default function serveStatic(baseDir: string) {
-    const resolvedDir = path.resolve(baseDir)
-
     return (req: Request, res: Response, next: NextFunction) => {
-        const filePath = path.join(resolvedDir, req.path)
-        const normalizedPath = path.normalize(filePath)
-
-        if (!normalizedPath.startsWith(resolvedDir)) {
-            return next()
-        }
+        const normalizedPath = path.join(baseDir, req.path)
 
         fs.access(normalizedPath, fs.constants.F_OK, (err) => {
             if (err) {
                 return next()
             }
-            return res.sendFile(filePath, (sendErr) => {
-                if (sendErr) {
-                    next(sendErr)
+            return res.sendFile(normalizedPath, (error) => {
+                if (error) {
+                    next(error)
                 }
             })
         })

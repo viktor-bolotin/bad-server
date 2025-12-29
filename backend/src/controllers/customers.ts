@@ -92,7 +92,7 @@ export const getCustomers = async (
             const escapedRegex = new RegExp(search as string, 'i')
             const orders = await Order.find(
                 {
-                    $or: [{ deliveryAddress: { name: escapedRegex }, }],
+                    $or: [{ deliveryAddress: escapedRegex }],
                 },
                 '_id'
             )
